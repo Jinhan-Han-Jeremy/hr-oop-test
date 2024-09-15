@@ -2,6 +2,7 @@ package org.example;
 
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Main {
@@ -34,7 +35,7 @@ public class Main {
     }
 
     // 최적의 팀 조합을 찾아주는 함수
-    public static void findOptimalTeamCombinationn(String[] teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
+    public static void findOptimalTeamCombination2(String[] teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
         List<String> firstTaskTeam = findOptimalTeamForTaskk(teamMembers, timeMatrix, firstTaskIdx);
         double firstTaskTime = calculateTaskTime(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
 
@@ -54,10 +55,6 @@ public class Main {
         System.out.println("Second task " + tasks.get((firstTaskIdx + 1) % tasks.size()) + ": " + secondTaskTeam + ", Completion time: " + String.format("%.2f", secondTaskTime) + " days");
         System.out.println("Third task " + tasks.get((firstTaskIdx + 2) % tasks.size()) + ": " + thirdTaskTeam + ", Completion time: " + String.format("%.2f", thirdTaskTime) + " days");
     }
-
-
-
-
 
 
     // 전체 작업 순서에 대해 최적의 멤버 조합을 구하고, 작업 시간을 출력하는 함수
@@ -148,7 +145,7 @@ public class Main {
         return remaining.toArray(new String[0]);
     }
 
-    public static void hashMapSplitter(Map<String, Integer> hashMapStrInt){
+    public static void hashMapSplitter(Map<String, Integer> hashMapStrInt) {
 
         for (String key : hashMapStrInt.keySet()) {
             Integer value = hashMapStrInt.get(key);
@@ -156,7 +153,7 @@ public class Main {
         }
     }
 
-    public static String removeWords(String taskName) {
+    public static String extractStemWords(String taskName) {
         // " 초기"로 끝나면 " 초기" 제거
         if (taskName.endsWith(" 초기")) {
             taskName = taskName.substring(0, taskName.length() - 3);  // " 초기"의 길이는 3이므로 마지막 3글자를 제거
@@ -165,26 +162,30 @@ public class Main {
         else if (taskName.endsWith(" 후기")) {
             taskName = taskName.substring(0, taskName.length() - 3);  // " 후기"의 길이도 3이므로 마지막 3글자를 제거
         }
-
+        // 초기문서작업
         return taskName;
     }
 
-    public static List<Task> taskAssigner(List<Task> tasks, List<String> selectedTaskNames, List<TasksHistory> tasksHistoryList){
+    public static List<Task> taskAssign(List<Task> tasks, List<String> selectedTaskNames, List<TasksHistory> tasksHistoryList) {
 
         List<Task> selectedTasks = new ArrayList<>();
         for (int i = 0; i < tasks.size(); i++) {
             Task task = tasks.get(i);
 
-            for(String selectedTaskName : selectedTaskNames){
-                String theWord = removeWords(task.getName());
+            for (String selectedTaskName : selectedTaskNames) {
+                String theWord = extractStemWords(task.getName());
+//                String theWord = removeWords(task.getName());
 
                 System.out.println(i + " tsk " + selectedTaskName + "  slct task " + theWord);
 
-                // 유사성 판단 결과 출력
-                if ((isSimilar(selectedTaskName, theWord) || containsOrContained(selectedTaskName, theWord)) && checkTaskState(task, tasksHistoryList)) {
-                    System.out.println("두 문자열이 75% 이상 유사합니다.");
-                    selectedTasks.add(task);
+
+                if ((!isSimilar(selectedTaskName, theWord) && !containsOrContained(selectedTaskName, theWord))
+                        || !checkTaskState(task, tasksHistoryList)) {
+                    continue;
                 }
+
+                System.out.println("두 문자열이 75% 이상 유사하거나 또는 선택된 Task가 포함되어있습니다. 그리고 TaskState가 Done이 아닙니다.");
+                selectedTasks.add(task);
 
             }
         }
@@ -202,10 +203,8 @@ public class Main {
         //difficulty에 따른 적합한 레벨의 유저 할당
         if (taskDifficulty >= 3 && memberLevel > 1) {
             return true; // 난이도가 높고 멤버의 레벨이 1 이상이면 추가
-        } else if (taskDifficulty < 3 && memberLevel < 3) {
-            return true; // 난이도가 낮고 멤버의 레벨이 3 미만이면 추가
-        }
-        return false;
+
+        } else return taskDifficulty < 3 && memberLevel < 3; // 난이도가 낮고 멤버의 레벨이 3 미만이면 추가
     }
 
     // 멤버가 선택된 작업을 수행할 수 있는지 확인하는 함수
@@ -227,7 +226,10 @@ public class Main {
         List<TeamMember> selectedMembers = new ArrayList<>();
 
         for (TeamMember member : members) {
+            // 이 멤버가 Task 를 수행할 수 있어? 없어? <-- 정책.
+            //
             boolean addable = canAddMemberForTasks(member, selectedTasks, userOrder); // 멤버가 작업을 수행할 수 있는지 확인
+            // 단점 ?
 
             if (addable && member.getState() == true) {
                 selectedMembers.add(member); // 조건에 맞는 멤버를 추가
@@ -236,7 +238,6 @@ public class Main {
         return selectedMembers;
     }
     //select member
-
 
 
     // 두 문자열 중 하나가 다른 하나를 포함하는지 확인하는 함수
@@ -311,21 +312,20 @@ public class Main {
                 String taskName = task.getName();
 
                 // 작업 어령움을 측정
-                if(task.getDifficulty() >= 3){
+                if (task.getDifficulty() >= 3) {
                     difficulty = 3;
                 }
 
                 // 해당 작업에 대한 평가 점수가 있는지 확인
                 if (evaluations.containsKey(taskName)) {
-                    addable= true;
+                    addable = true;
                 }
             }
 
             // 업무어려움에 맞춰서 그에 맞는 멤버 추가
-            if (addable == true && difficulty == 3 && member.getLevel() > 1){
+            if (addable == true && difficulty == 3 && member.getLevel() > 1) {
                 selectedMembers.add(member);
-            }
-            else if(addable == true && difficulty < 3 && member.getLevel() < 3){
+            } else if (addable == true && difficulty < 3 && member.getLevel() < 3) {
                 selectedMembers.add(member);
             }
         }
@@ -361,63 +361,33 @@ public class Main {
 
     public static void main(String[] args) throws UnsupportedEncodingException {
         // 출력 인코딩을 UTF-8로 설정
-        System.setOut(new PrintStream(System.out, true, "UTF-8"));
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
 
         List<TeamMember> members = new ArrayList<>();  // 팀 멤버 리스트
         List<Task> tasks = new ArrayList<>();  // 작업 리스트
 
         // 이프로 - Project Manager
-        Map<String, Integer> evaluations1 = new HashMap<>();
-        evaluations1.put("프로젝트 목표와 범위 설정 초기", 3);
-        evaluations1.put("프로젝트 목표와 범위 설정 후기", 4);
-        evaluations1.put("일정과 예산 계획 수립 초기", 4);
-        evaluations1.put("일정과 예산 계획 수립 후기", 4);
-        evaluations1.put("팀 구성 및 역할 할당 초기", 4);
-        evaluations1.put("팀 구성 및 역할 할당 후기", 4);
+        Map<String, Integer> evaluations1 = get이프로작업평가시간(); // 평가
         members.add(new TeamMember("이프로", "Project Manager", 2, true, new ArrayList<>(evaluations1.keySet()), evaluations1));
 
         // 최프로 - Project Manager
-        Map<String, Integer> evaluations2 = new HashMap<>();
-        evaluations2.put("프로젝트 목표와 범위 설정 초기", 3);
-        evaluations2.put("프로젝트 목표와 범위 설정 후기", 3);
-        evaluations2.put("일정과 예산 계획 수립 초기", 3);
-        evaluations2.put("일정과 예산 계획 수립 후기", 4);
+        Map<String, Integer> evaluations2 = get최프로작업평가시간();
         members.add(new TeamMember("최프로", "Project Manager", 3, true, new ArrayList<>(evaluations2.keySet()), evaluations2));
 
         // 이덕마 - Product Manager
-        Map<String, Integer> evaluations3 = new HashMap<>();
-        evaluations3.put("팀 구성 및 역할 할당 후기", 4);
-        evaluations3.put("프로젝트 킥오프 미팅 주최 초기", 5);
-        evaluations3.put("서비스 수익 분석 초기", 3);
-        evaluations3.put("프로젝트 킥오프 미팅 주최 후기", 5);
-        evaluations3.put("서비스 수익 분석 후기", 3);
+        Map<String, Integer> evaluations3 = get이덕마평가시간();
         members.add(new TeamMember("이덕마", "Product Manager", 2, false, new ArrayList<>(evaluations3.keySet()), evaluations3));
 
         // 최덕마 - Product Manager
-        Map<String, Integer> evaluations4 = new HashMap<>();
-        evaluations4.put("팀 구성 및 역할 할당 초기", 3);
-        evaluations4.put("팀 구성 및 역할 할당 후기", 3);
-        evaluations4.put("프로젝트 킥오프 미팅 주최 초기", 4);
-        evaluations4.put("프로젝트 킥오프 미팅 주최 후기", 4);
-        evaluations4.put("서비스 수익 분석 후기", 4);
-        evaluations4.put("서비스 수익 분석 초기", 4);
+        Map<String, Integer> evaluations4 = get최덕마평가시간();
         members.add(new TeamMember("최덕마", "Product Manager", 3, true, new ArrayList<>(evaluations4.keySet()), evaluations4));
 
         // 이비례 - Business Operator
-        Map<String, Integer> evaluations5 = new HashMap<>();
-        evaluations5.put("비즈니스 요구사항 분석 초기", 4);
-        evaluations5.put("비즈니스 요구사항 분석 후기", 4);
-        evaluations3.put("서비스 수익 분석 초기", 3);
-        evaluations3.put("프로젝트 킥오프 미팅 주최 후기", 5);
-        evaluations3.put("서비스 수익 분석 후기", 3);
+        Map<String, Integer> evaluations5 = get이비례평가시간();
         members.add(new TeamMember("이비례", "Business Operator", 2, true, new ArrayList<>(evaluations5.keySet()), evaluations5));
 
         // 유태리 - Tech Lead
-        Map<String, Integer> evaluations6 = new HashMap<>();
-        evaluations6.put("기술 스택 선정 초기", 4);
-        evaluations6.put("시스템 아키텍처 설계 초기", 4);
-        evaluations6.put("RESTful 서비스 초기", 4);
-        evaluations6.put("마이크로서비스 초기", 4);
+        Map<String, Integer> evaluations6 = get유태리평가시간();
         members.add(new TeamMember("유태리", "Tech Lead", 3, true, new ArrayList<>(evaluations6.keySet()), evaluations6));
 
         List<String> employees = List.of("ProjectManager", "BusinessOperator", "Product Manager");
@@ -425,8 +395,83 @@ public class Main {
         // 작업 추가 (작업 이름 예시)
         List<String> selectedTasknames = Arrays.asList("프로젝트 목표와 범위 설정", "일정과 예산 계획 수립", "팀 구성 및 역할 할당");
 
-        List<Task> selectedTasks = new ArrayList<>();
+        addInitsTask(tasks);
 
+        List<TasksHistory> tasksHistoryList = getTasksHistories();
+
+        List<Task> selectedTasks = taskAssign(tasks, selectedTasknames, tasksHistoryList);
+
+        // 팀 멤버와 작업 정의
+        List<TeamMember> selectedMembers = selectMember(selectedTasks, members, false);
+
+
+        // 팀 멤버 출력
+        for (int i = 0; i < selectedMembers.size(); i++) {
+            TeamMember member = selectedMembers.get(i);
+            System.out.println(member.getName());
+
+            Map<String, Integer> evaluations = member.getEvaluations();
+            hashMapSplitter(evaluations);
+        }
+
+        List<String> selectedTaskNames = new ArrayList<>();
+
+        // selectedTasks에서 task 이름을 리스트에 추가
+        for (int i = 0; i < selectedTasks.size(); i++) {
+            selectedTaskNames.add(selectedTasks.get(i).getName());
+            System.out.println(selectedTasks.get(i).getName());
+        }
+
+        // 리스트를 String 배열로 변환
+        String[] taskNamesArray = selectedTaskNames.toArray(new String[0]);
+
+        double[][] timeMatrixx = generateTimeMatrix(selectedTasks, members);
+
+        System.out.println("Start optimization");
+        // 1. Z 작업을 먼저 고려한 경우
+        System.out.println("Case 1: a 작업 최적화 먼저");
+
+        List<String> list = selectedTasks.stream().map(s -> s.getName()).toList();
+        findOptimalTeamCombination2(taskNamesArray, timeMatrixx, list, 0);
+
+        // 2. X 작업을 먼저 고려한 경우
+        System.out.println("\nCase 2: b작업 최적화 먼저");
+        findOptimalTeamCombination2(taskNamesArray, timeMatrixx, list, 1);
+
+        // 3. C 작업을 먼저 고려한 경우
+        System.out.println("\nCase 3: C 작업 최적화 먼저");
+        findOptimalTeamCombination(taskNamesArray, timeMatrixx, list, 2);
+
+
+        // 각 팀 멤버가 작업을 완료하는 데 걸리는 시간 (불가능한 경우 Double.POSITIVE_INFINITY)
+        double[][] timeMatrix = {
+                {6, Double.POSITIVE_INFINITY, 6},  // 팀 멤버 a
+                {7, 6, Double.POSITIVE_INFINITY},  // 팀 멤버 b
+                {6, 5, 7},                        // 팀 멤버 c
+                {8, Double.POSITIVE_INFINITY, 5},  // 팀 멤버 d
+                {7, 8, 6},                        // 팀 멤버 e
+                {Double.POSITIVE_INFINITY, 7, 4}   // 팀 멤버 f
+        };
+
+        String[] teamMembers = {"a", "b", "c", "d", "e", "f"};
+        List<String> tasks_sample = Arrays.asList("Z", "X", "C");
+
+        System.out.println("Start optimization");
+        // 1. Z 작업을 먼저 고려한 경우
+        System.out.println("Case 1: Z 작업 최적화 먼저");
+        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 0);
+
+        // 2. X 작업을 먼저 고려한 경우
+        System.out.println("\nCase 2: X 작업 최적화 먼저");
+        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 1);
+
+        // 3. C 작업을 먼저 고려한 경우
+        System.out.println("\nCase 3: C 작업 최적화 먼저");
+        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 2);
+
+    }
+
+    private static void addInitsTask(List<Task> tasks) {
         // 데이터를 Task 객체로 생성하여 리스트에 추가
         tasks.add(new Task("목표와 범위 설정 초기", Arrays.asList("ProjectManager", "BusinessOperator"), 4));
         tasks.add(new Task("프로젝트 목표와 범위 설정 후기", Arrays.asList("ProjectManager"), 4));
@@ -455,8 +500,9 @@ public class Main {
         tasks.add(new Task("기술 스택 선정 후기", Arrays.asList("TechLead"), 4));
         tasks.add(new Task("시스템 아키텍처 설계 초기", Arrays.asList("Developer", "TechLead"), 2));
         tasks.add(new Task("시스템 아키텍처 설계 후기", Arrays.asList("Developer", "TechLead"), 2));
+    }
 
-
+    private static List<TasksHistory> getTasksHistories() {
         // List<TasksHistory> 생성 및 데이터 할당
         List<TasksHistory> tasksHistoryList = new ArrayList<>();
 
@@ -540,85 +586,67 @@ public class Main {
                 "not started",
                 false
         ));
+        return tasksHistoryList;
+    }
 
+    private static Map<String, Integer> get이비례평가시간() {
+        Map<String, Integer> evaluations5 = new HashMap<>();
+        evaluations5.put("비즈니스 요구사항 분석 초기", 4);
+        evaluations5.put("비즈니스 요구사항 분석 후기", 4);
+        evaluations5.put("서비스 수익 분석 초기", 3);
+        evaluations5.put("프로젝트 킥오프 미팅 주최 후기", 5);
+        evaluations5.put("서비스 수익 분석 후기", 3);
+        return evaluations5;
+    }
 
-        selectedTasks = taskAssigner(tasks, selectedTasknames, tasksHistoryList);
-        ///여기까지 작업할당 완료
-        ///여기까지 작업할당 완료
+    private static Map<String, Integer> get유태리평가시간() {
+        Map<String, Integer> evaluations6 = new HashMap<>();
+        evaluations6.put("기술 스택 선정 초기", 4);
+        evaluations6.put("시스템 아키텍처 설계 초기", 4);
+        evaluations6.put("RESTful 서비스 초기", 4);
+        evaluations6.put("마이크로서비스 초기", 4);
+        return evaluations6;
+    }
 
-        System.out.println("Task Completion Times: " + 1);
+    private static Map<String, Integer> get최덕마평가시간() {
+        Map<String, Integer> evaluations4 = new HashMap<>();
+        evaluations4.put("팀 구성 및 역할 할당 초기", 3);
+        evaluations4.put("팀 구성 및 역할 할당 후기", 3);
+        evaluations4.put("프로젝트 킥오프 미팅 주최 초기", 4);
+        evaluations4.put("프로젝트 킥오프 미팅 주최 후기", 4);
+        evaluations4.put("서비스 수익 분석 후기", 4);
+        evaluations4.put("서비스 수익 분석 초기", 4);
+        return evaluations4;
+    }
 
-        // 팀 멤버와 작업 정의
-        List<TeamMember> selectedMembers = selectMember(selectedTasks, members, false);
+    private static Map<String, Integer> get이덕마평가시간() {
+        Map<String, Integer> evaluations3 = new HashMap<>();
+        evaluations3.put("팀 구성 및 역할 할당 후기", 4);
+        evaluations3.put("프로젝트 킥오프 미팅 주최 초기", 5);
+        evaluations3.put("서비스 수익 분석 초기", 3);
+        evaluations3.put("프로젝트 킥오프 미팅 주최 후기", 5);
+        evaluations3.put("서비스 수익 분석 후기", 3);
+        return evaluations3;
+    }
 
+    private static Map<String, Integer> get최프로작업평가시간() {
+        Map<String, Integer> evaluations2 = new HashMap<>();
+        evaluations2.put("프로젝트 목표와 범위 설정 초기", 3); // 작업 이름 과 걸리는 시간
+        evaluations2.put("프로젝트 목표와 범위 설정 후기", 3);
+        evaluations2.put("일정과 예산 계획 수립 초기", 3);
+        evaluations2.put("일정과 예산 계획 수립 후기", 4);
+        return evaluations2;
+    }
 
-        // 팀 멤버 출력
-        for (int i =0; i < selectedMembers.size(); i++) {
-            TeamMember member = selectedMembers.get(i);
-            System.out.println(member.getName());
-
-            Map<String, Integer> evaluations = member.getEvaluations();
-            hashMapSplitter(evaluations);
-        }
-
-        List<String> selectedTaskNames = new ArrayList<>();
-
-// selectedTasks에서 task 이름을 리스트에 추가
-        for (int i = 0; i < selectedTasks.size(); i++) {
-            selectedTaskNames.add(selectedTasks.get(i).getName());
-            System.out.println(selectedTasks.get(i).getName());
-        }
-
-// 리스트를 String 배열로 변환
-        String[] taskNamesArray = selectedTaskNames.toArray(new String[0]);
-
-
-
-        double[][] timeMatrixx = generateTimeMatrix(selectedTasks, members);
-
-
-
-        System.out.println("Start optimization");
-        // 1. Z 작업을 먼저 고려한 경우
-        System.out.println("Case 1: a 작업 최적화 먼저");
-        findOptimalTeamCombinationn(taskNamesArray, timeMatrixx, selectedTasks, 0);
-
-        // 2. X 작업을 먼저 고려한 경우
-        System.out.println("\nCase 2: b작업 최적화 먼저");
-        findOptimalTeamCombinationn(taskNamesArray, timeMatrixx, selectedTasks, 1);
-
-        // 3. C 작업을 먼저 고려한 경우
-        System.out.println("\nCase 3: C 작업 최적화 먼저");
-        findOptimalTeamCombination(taskNamesArray, timeMatrixx, selectedTasks, 2);
-
-
-
-        // 각 팀 멤버가 작업을 완료하는 데 걸리는 시간 (불가능한 경우 Double.POSITIVE_INFINITY)
-        double[][] timeMatrix = {
-                {6, Double.POSITIVE_INFINITY, 6},  // 팀 멤버 a
-                {7, 6, Double.POSITIVE_INFINITY},  // 팀 멤버 b
-                {6, 5, 7},                        // 팀 멤버 c
-                {8, Double.POSITIVE_INFINITY, 5},  // 팀 멤버 d
-                {7, 8, 6},                        // 팀 멤버 e
-                {Double.POSITIVE_INFINITY, 7, 4}   // 팀 멤버 f
-        };
-
-        String[] teamMembers = {"a", "b", "c", "d", "e", "f"};
-        List<String> tasks_sample = Arrays.asList("Z", "X", "C");
-
-        System.out.println("Start optimization");
-        // 1. Z 작업을 먼저 고려한 경우
-        System.out.println("Case 1: Z 작업 최적화 먼저");
-        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 0);
-
-        // 2. X 작업을 먼저 고려한 경우
-        System.out.println("\nCase 2: X 작업 최적화 먼저");
-        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 1);
-
-        // 3. C 작업을 먼저 고려한 경우
-        System.out.println("\nCase 3: C 작업 최적화 먼저");
-        findOptimalTeamCombination(teamMembers, timeMatrix, tasks_sample, 2);
-
+    private static Map<String, Integer> get이프로작업평가시간() {
+        Map<String, Integer> evaluations1 = new HashMap<>();
+        evaluations1.put("프로젝트 목표와 범위 설정 초기", 3);
+        evaluations1.put("프로젝트 목표와 범위 설정 후기", 4);
+        evaluations1.put("일정과 예산 계획 수립 초기", 4);
+        evaluations1.put("일정과 예산 계획 수립 후기", 4);
+        evaluations1.put("팀 구성 및 역할 할당 초기", 4);
+        evaluations1.put("팀 구성 및 역할 할당 후기", 4);
+        return evaluations1;
     }
 
 
