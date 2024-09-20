@@ -4,12 +4,17 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.math.RoundingMode;
 
 public class Main {
     // 주어진 작업에 대해 최적의 팀을 찾는 함수
     public static List<TeamMember> findOptimalTeamForTask2(List<TeamMember> teamMembers, double[][] timeMatrix, int taskIdx) {
         BigDecimal bestTime = new BigDecimal(Double.MAX_VALUE);
         List<TeamMember> bestCombination = new ArrayList<>();
+
+        //for (int i = 0; i < teamMembers.size(); i++) {
+        //    System.out.println(" jj "+teamMembers.get(i).getName());
+        //}
 
         // 3명의 팀 멤버를 선택하는 모든 조합을 생성
         for (int i = 0; i < teamMembers.size() - 2; i++) {
@@ -19,9 +24,13 @@ public class Main {
                     double time2 = timeMatrix[j][taskIdx];
                     double time3 = timeMatrix[k][taskIdx];
 
+                    if (Double.isFinite(time1)) {
+                        System.out.println(" aa "+ time1);
+                    }
+
                     // 유효한 작업 시간에 대해서만 계산
                     if (Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3) && time1 > 0 && time2 > 0 && time3 > 0) {
-
+                        System.out.println(" jj "+ time1);
                         BigDecimal parallelTime = new BigDecimal((3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3))); // 병렬 작업 시간
 
                         // parallelTime이 bestTime보다 작음
@@ -30,6 +39,43 @@ public class Main {
                             bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j), teamMembers.get(k));
                         }
                     }
+                    else if(Double.isFinite(time1) && Double.isFinite(time2) && time1 > 0 && time2 > 0){
+                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time1 + 1.0 / time2))); // 병렬 작업 시간
+
+                        // parallelTime이 bestTime보다 작음
+                        if (parallelTime.compareTo(bestTime) < 0) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
+                        }
+                    }
+                    else if(Double.isFinite(time1) && Double.isFinite(time3) && time1 > 0 && time3 > 0){
+                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time1 + 1.0 / time3))); // 병렬 작업 시간
+
+                        // parallelTime이 bestTime보다 작음
+                        if (parallelTime.compareTo(bestTime) < 0) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
+                        }
+                    }
+                    else if(Double.isFinite(time2) && Double.isFinite(time3) && time2 > 0 && time3 > 0){
+                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time2 + 1.0 / time3))); // 병렬 작업 시간
+
+                        // parallelTime이 bestTime보다 작음
+                        if (parallelTime.compareTo(bestTime) < 0) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
+                        }
+                    }
+                    else if(Double.isFinite(time1) && time1 > 0){
+                        BigDecimal parallelTime = new BigDecimal(1.0 / (1.0 / time1)); // 병렬 작업 시간
+
+                        // parallelTime이 bestTime보다 작음
+                        if (parallelTime.compareTo(bestTime) < 0) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers.get(i));
+                        }
+                    }
+
                 }
             }
         }
@@ -40,111 +86,52 @@ public class Main {
     public static void findOptimalTeamCombination2(List<TeamMember> teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
 
         List<TeamMember> firstTaskTeam = findOptimalTeamForTask2(teamMembers, timeMatrix, firstTaskIdx);
-        double firstTaskTime = calculateTaskTime2(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
+        BigDecimal firstTaskTime = calculateTaskTime2(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
         List<TeamMember> remainingMembers = excludeTeamMembers2(teamMembers, firstTaskTeam);
 
         // 두 번째 작업
         List<TeamMember> secondTaskTeam = findOptimalTeamForTask2(remainingMembers, timeMatrix, (firstTaskIdx + 1) % tasks.size());
-        double secondTaskTime = calculateTaskTime2(remainingMembers, secondTaskTeam, timeMatrix, (firstTaskIdx + 1) % tasks.size());
+        BigDecimal secondTaskTime = calculateTaskTime2(remainingMembers, secondTaskTeam, timeMatrix, (firstTaskIdx + 1) % tasks.size());
         List<TeamMember> remainingMembersAfterSecond = excludeTeamMembers2(remainingMembers, secondTaskTeam);
 
         // 세 번째 작업
         List<TeamMember> thirdTaskTeam = findOptimalTeamForTask2(remainingMembersAfterSecond, timeMatrix, (firstTaskIdx + 2) % tasks.size());
-        double thirdTaskTime = calculateTaskTime2(remainingMembersAfterSecond, thirdTaskTeam, timeMatrix, (firstTaskIdx + 2) % tasks.size());
+        BigDecimal thirdTaskTime = calculateTaskTime2(remainingMembersAfterSecond, thirdTaskTeam, timeMatrix, (firstTaskIdx + 2) % tasks.size());
 
-        // 결과 출력
-        System.out.println("First task " + tasks.get(firstTaskIdx) + ": " + firstTaskTeam + ", Completion time: " + String.format("%.2f", firstTaskTime) + " days");
-        System.out.println("Second task " + tasks.get((firstTaskIdx + 1) % tasks.size()) + ": " + secondTaskTeam + ", Completion time: " + String.format("%.2f", secondTaskTime) + " days");
-        System.out.println("Third task " + tasks.get((firstTaskIdx + 2) % tasks.size()) + ": " + thirdTaskTeam + ", Completion time: " + String.format("%.2f", thirdTaskTime) + " days");
-    }
-
-
-
-
-
-    // 전체 작업 순서에 대해 최적의 멤버 조합을 구하고, 작업 시간을 출력하는 함수
-    public static void findOptimalTeamCombination(String[] teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
-        // 첫 번째 작업에 대해 최적의 팀을 선택하고 작업 시간을 계산
-        List<String> firstTaskTeam = findOptimalTeamForTask(teamMembers, timeMatrix, firstTaskIdx);
-        double firstTaskTime = calculateTaskTime(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
-
-        // 첫 번째 작업에 선택된 팀원 제외
-        String[] remainingMembers = excludeTeamMembers(teamMembers, firstTaskTeam);
-
-        // 두 번째 작업
-        List<String> secondTaskTeam = findOptimalTeamForTask(remainingMembers, timeMatrix, (firstTaskIdx + 1) % tasks.size());
-        double secondTaskTime = calculateTaskTime(remainingMembers, secondTaskTeam, timeMatrix, (firstTaskIdx + 1) % tasks.size());
-        String[] remainingMembersAfterSecond = excludeTeamMembers(remainingMembers, secondTaskTeam);
-
-        // 세 번째 작업
-        List<String> thirdTaskTeam = findOptimalTeamForTask(remainingMembersAfterSecond, timeMatrix, (firstTaskIdx + 2) % tasks.size());
-        double thirdTaskTime = calculateTaskTime(remainingMembersAfterSecond, thirdTaskTeam, timeMatrix, (firstTaskIdx + 2) % tasks.size());
-
-        // 결과 출력
-        System.out.println("First task " + tasks.get(firstTaskIdx) + ": " + firstTaskTeam + ", Completion time: " + String.format("%.2f", firstTaskTime) + " days");
-        System.out.println("Second task " + tasks.get((firstTaskIdx + 1) % tasks.size()) + ": " + secondTaskTeam + ", Completion time: " + String.format("%.2f", secondTaskTime) + " days");
-        System.out.println("Third task " + tasks.get((firstTaskIdx + 2) % tasks.size()) + ": " + thirdTaskTeam + ", Completion time: " + String.format("%.2f", thirdTaskTime) + " days");
-    }
-
-    // 각 작업에 대해 팀 멤버 3명을 선택하여 최단 기간을 계산하는 함수
-    public static List<String> findOptimalTeamForTask(String[] teamMembers, double[][] timeMatrix, int taskIdx) {
-        double bestTime = Double.POSITIVE_INFINITY;
-        List<String> bestCombination = new ArrayList<>();
-
-        // 3명의 팀 멤버를 선택하는 모든 조합을 생성
-        for (int i = 0; i < teamMembers.length - 2; i++) {
-            for (int j = i + 1; j < teamMembers.length - 1; j++) {
-                for (int k = j + 1; k < teamMembers.length; k++) {
-                    double time1 = timeMatrix[i][taskIdx];
-                    double time2 = timeMatrix[j][taskIdx];
-                    double time3 = timeMatrix[k][taskIdx];
-
-                    // 유효한 작업 시간에 대해서만 계산
-                    if (Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3)) {
-                        // 병렬 작업 시간이 줄어드는 연산 방식 적용
-                        double parallelTime = 3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3); // 병렬 작업 시간
-
-                        if (parallelTime < bestTime) {
-                            bestTime = parallelTime;
-                            bestCombination = Arrays.asList(teamMembers[i], teamMembers[j], teamMembers[k]);
-                        }
-                    }
-                }
-            }
+        List<String> firstTeamNames = new ArrayList<>();
+        for (int i =0; i < firstTaskTeam.size(); i++) {
+            firstTeamNames.add(firstTaskTeam.get(i).getName());
         }
-        return bestCombination;
+        // 결과 출력
+        System.out.println("First task " + tasks.get(firstTaskIdx) + ": " + firstTeamNames + ", Completion time: " + String.format("%.2f", firstTaskTime) + " days");
+        System.out.println("Second task " + tasks.get((firstTaskIdx + 1) % tasks.size()) + ": " + secondTaskTeam + ", Completion time: " + String.format("%.2f", secondTaskTime) + " days");
+        System.out.println("Third task " + tasks.get((firstTaskIdx + 2) % tasks.size()) + ": " + thirdTaskTeam + ", Completion time: " + String.format("%.2f", thirdTaskTime) + " days");
     }
 
     // 두 번째 함수: 병렬로 작업 시간을 계산
-    public static double calculateParallelTime(List<Double> times) {
+    public static BigDecimal calculateParallelTime(List<Double> times) {
         //BigDecimal BigInteger
-        double sum = 0.0;
+        BigDecimal sum = new BigDecimal(0.0);
         for (double time : times) {
-            sum += 1.0 / time;
+            BigDecimal timeBD = BigDecimal.valueOf(time);
+            if (timeBD.compareTo(BigDecimal.ZERO) > 0) { // time이 0보다 클 때만 처리
+                sum = sum.add(BigDecimal.ONE.divide(timeBD, 3, RoundingMode.HALF_UP)); // 역수 더하기
+            }
         }
-        return 3.0 / sum; // 병렬로 처리한 작업 시간
+
+        // 병렬 작업 시간 계산 (3.0을 BigDecimal로 변환하여 사용)
+        if (sum.compareTo(BigDecimal.ZERO) > 0) {
+            return BigDecimal.valueOf(3.0).divide(sum, 3, RoundingMode.HALF_UP); // 소수점 10자리까지 반올림
+        } else {
+            return BigDecimal.ZERO; // 계산할 수 없을 경우 0 반환
+        }
     }
     // 작업 시간을 계산하는 함수 (선택된 팀 멤버의 병렬 작업 시간)
-    public static double calculateTaskTime2(List<TeamMember> teamMembers, List<TeamMember> selectedTeam, double[][] timeMatrix, int taskIdx) {
+    public static BigDecimal calculateTaskTime2(List<TeamMember> teamMembers, List<TeamMember> selectedTeam, double[][] timeMatrix, int taskIdx) {
         List<Double> times = new ArrayList<>();
         for (TeamMember member : selectedTeam) {
             for (int i = 0; i < teamMembers.size(); i++) {
                 if (teamMembers.get(i).getName().equals(member)) {
-                    times.add(timeMatrix[i][taskIdx]);
-                    break;
-                }
-            }
-        }
-        // 병렬 작업 시간 계산
-        return calculateParallelTime(times);
-    }
-
-    // 작업 시간을 계산하는 함수 (선택된 팀 멤버의 병렬 작업 시간)
-    public static double calculateTaskTime(String[] teamMembers, List<String> selectedMembers, double[][] timeMatrix, int taskIdx) {
-        List<Double> times = new ArrayList<>();
-        for (String member : selectedMembers) {
-            for (int i = 0; i < teamMembers.length; i++) {
-                if (teamMembers[i].equals(member)) {
                     times.add(timeMatrix[i][taskIdx]);
                     break;
                 }
@@ -166,6 +153,95 @@ public class Main {
         return remainings;
     }
 
+    // 전체 작업 순서에 대해 최적의 멤버 조합을 구하고, 작업 시간을 출력하는 함수
+    public static void findOptimalTeamCombination(String[] teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
+        // 첫 번째 작업에 대해 최적의 팀을 선택하고 작업 시간을 계산
+        List<String> firstTaskTeam = findOptimalTeamForTask(teamMembers, timeMatrix, firstTaskIdx);
+        BigDecimal firstTaskTime = calculateTaskTime(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
+
+        // 첫 번째 작업에 선택된 팀원 제외
+        String[] remainingMembers = excludeTeamMembers(teamMembers, firstTaskTeam);
+
+        // 두 번째 작업
+        List<String> secondTaskTeam = findOptimalTeamForTask(remainingMembers, timeMatrix, (firstTaskIdx + 1) % tasks.size());
+        BigDecimal secondTaskTime = calculateTaskTime(remainingMembers, secondTaskTeam, timeMatrix, (firstTaskIdx + 1) % tasks.size());
+        String[] remainingMembersAfterSecond = excludeTeamMembers(remainingMembers, secondTaskTeam);
+
+        // 세 번째 작업
+        List<String> thirdTaskTeam = findOptimalTeamForTask(remainingMembersAfterSecond, timeMatrix, (firstTaskIdx + 2) % tasks.size());
+        BigDecimal thirdTaskTime = calculateTaskTime(remainingMembersAfterSecond, thirdTaskTeam, timeMatrix, (firstTaskIdx + 2) % tasks.size());
+
+        // 결과 출력
+        System.out.println("First task " + tasks.get(firstTaskIdx) + ": " + firstTaskTeam + ", Completion time: " + String.format("%.2f", firstTaskTime) + " days");
+        System.out.println("Second task " + tasks.get((firstTaskIdx + 1) % tasks.size()) + ": " + secondTaskTeam + ", Completion time: " + String.format("%.2f", secondTaskTime) + " days");
+        System.out.println("Third task " + tasks.get((firstTaskIdx + 2) % tasks.size()) + ": " + thirdTaskTeam + ", Completion time: " + String.format("%.2f", thirdTaskTime) + " days");
+    }
+
+
+    // 각 작업에 대해 팀 멤버 3명을 선택하여 최단 기간을 계산하는 함수
+    public static List<String> findOptimalTeamForTask(String[] teamMembers, double[][] timeMatrix, int taskIdx) {
+        double bestTime = Double.POSITIVE_INFINITY;
+        List<String> bestCombination = new ArrayList<>();
+
+        // 3명의 팀 멤버를 선택하는 모든 조합을 생성
+        for (int i = 0; i < teamMembers.length - 2; i++) {
+            for (int j = i + 1; j < teamMembers.length - 1; j++) {
+                for (int k = j + 1; k < teamMembers.length; k++) {
+                    double time1 = timeMatrix[i][taskIdx];
+                    double time2 = timeMatrix[j][taskIdx];
+                    double time3 = timeMatrix[k][taskIdx];
+
+
+                    double parallelTime=0.0;
+                    // 유효한 작업 시간에 대해서만 계산
+                    if (Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3)) {
+                        // 병렬 작업 시간이 줄어드는 연산 방식 적용
+                        parallelTime = 3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3); // 병렬 작업 시간
+
+                        if (parallelTime < bestTime) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers[i], teamMembers[j], teamMembers[k]);
+                        }
+                    }
+                    else if (Double.isFinite(time1) && Double.isFinite(time2)) {
+                        // 2명만 있을 때 병렬 작업 시간 계산
+                        parallelTime = 2.0 / (1.0 / time1 + 1.0 / time2);
+
+                        if (parallelTime < bestTime) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers[i], teamMembers[j]);
+                        }
+                    }
+                    else if (Double.isFinite(time1)) {
+                        // 1명만 있을 때 작업 시간 계산 (병렬 작업이 아니므로 그대로 사용)
+                        parallelTime = time1;
+
+                        if (parallelTime < bestTime) {
+                            bestTime = parallelTime;
+                            bestCombination = Arrays.asList(teamMembers[i]);
+                        }
+                    }
+
+                }
+            }
+        }
+        return bestCombination;
+    }
+
+    // 작업 시간을 계산하는 함수 (선택된 팀 멤버의 병렬 작업 시간)
+    public static BigDecimal calculateTaskTime(String[] teamMembers, List<String> selectedMembers, double[][] timeMatrix, int taskIdx) {
+        List<Double> times = new ArrayList<>();
+        for (String member : selectedMembers) {
+            for (int i = 0; i < teamMembers.length; i++) {
+                if (teamMembers[i].equals(member)) {
+                    times.add(timeMatrix[i][taskIdx]);
+                    break;
+                }
+            }
+        }
+        // 병렬 작업 시간 계산
+        return calculateParallelTime(times);
+    }
 
     // 특정 작업에 할당된 팀원들을 제외한 나머지 팀원을 반환하는 함수
     public static String[] excludeTeamMembers(String[] allMembers, List<String> selectedMembers) {
@@ -332,42 +408,6 @@ public class Main {
         return true;
     }
 
-
-    public static List<TeamMember> selectedMembers(List<Task> selectedTasks, List<TeamMember> members) {
-
-        List<TeamMember> selectedMembers = List.of();
-        // 각 멤버가 작업을 완료하는 시간을 계산하여 timeMatrix에 저장
-        int difficulty = 0;
-        for (int i = 0; i < members.size(); i++) {
-            boolean addable = false;
-            TeamMember member = members.get(i);
-            Map<String, Integer> evaluations = member.getEvaluations(); // 각 멤버의 작업 평가 (작업당 소요 시간)
-
-            for (int j = 0; j < selectedTasks.size(); j++) {
-                Task task = selectedTasks.get(j);
-                String taskName = task.getName();
-
-                // 작업 어령움을 측정
-                if(task.getDifficulty() >= 3){
-                    difficulty = 3;
-                }
-
-                // 해당 작업에 대한 평가 점수가 있는지 확인
-                if (evaluations.containsKey(taskName)) {
-                    addable= true;
-                }
-            }
-
-            // 업무어려움에 맞춰서 그에 맞는 멤버 추가
-            if (addable == true && difficulty == 3 && member.getLevel() > 1){
-                selectedMembers.add(member);
-            }
-            else if(addable == true && difficulty < 3 && member.getLevel() < 3){
-                selectedMembers.add(member);
-            }
-        }
-        return selectedMembers;
-    }
 
     public static double[][] generateTimeMatrix(List<Task> selectedTasks, List<TeamMember> members) {
 
