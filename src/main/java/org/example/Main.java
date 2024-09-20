@@ -7,14 +7,9 @@ import java.util.*;
 import java.math.RoundingMode;
 
 public class Main {
-    // 주어진 작업에 대해 최적의 팀을 찾는 함수
     public static List<TeamMember> findOptimalTeamForTask2(List<TeamMember> teamMembers, double[][] timeMatrix, int taskIdx) {
         BigDecimal bestTime = new BigDecimal(Double.MAX_VALUE);
         List<TeamMember> bestCombination = new ArrayList<>();
-
-        //for (int i = 0; i < teamMembers.size(); i++) {
-        //    System.out.println(" jj "+teamMembers.get(i).getName());
-        //}
 
         // 3명의 팀 멤버를 선택하는 모든 조합을 생성
         for (int i = 0; i < teamMembers.size() - 2; i++) {
@@ -24,67 +19,41 @@ public class Main {
                     double time2 = timeMatrix[j][taskIdx];
                     double time3 = timeMatrix[k][taskIdx];
 
-                    if (Double.isFinite(time1)) {
-                        System.out.println(" aa "+ time1);
-                    }
-
                     // 유효한 작업 시간에 대해서만 계산
-                    if (Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3) && time1 > 0 && time2 > 0 && time3 > 0) {
-                        System.out.println(" jj "+ time1);
-                        BigDecimal parallelTime = new BigDecimal((3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3))); // 병렬 작업 시간
+                    if (time1 > 0 && time2 > 0 && time3 > 0 && Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3)) {
+                        BigDecimal parallelTime = BigDecimal.valueOf(3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3));
 
-                        // parallelTime이 bestTime보다 작음
                         if (parallelTime.compareTo(bestTime) < 0) {
                             bestTime = parallelTime;
                             bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j), teamMembers.get(k));
                         }
                     }
-                    else if(Double.isFinite(time1) && Double.isFinite(time2) && time1 > 0 && time2 > 0){
-                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time1 + 1.0 / time2))); // 병렬 작업 시간
+                    // 2명의 팀원만 유효할 때 병렬 계산
+                    else if (time1 > 0 && time2 > 0 && Double.isFinite(time1) && Double.isFinite(time2)) {
+                        BigDecimal parallelTime = BigDecimal.valueOf(2.0 / (1.0 / time1 + 1.0 / time2));
 
-                        // parallelTime이 bestTime보다 작음
                         if (parallelTime.compareTo(bestTime) < 0) {
                             bestTime = parallelTime;
                             bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
                         }
                     }
-                    else if(Double.isFinite(time1) && Double.isFinite(time3) && time1 > 0 && time3 > 0){
-                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time1 + 1.0 / time3))); // 병렬 작업 시간
+                    // 1명의 팀원만 유효할 때
+                    else if (time1 > 0 && Double.isFinite(time1)) {
+                        BigDecimal taskTime = BigDecimal.valueOf(time1);
 
-                        // parallelTime이 bestTime보다 작음
-                        if (parallelTime.compareTo(bestTime) < 0) {
-                            bestTime = parallelTime;
-                            bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
-                        }
-                    }
-                    else if(Double.isFinite(time2) && Double.isFinite(time3) && time2 > 0 && time3 > 0){
-                        BigDecimal parallelTime = new BigDecimal((2.0 / (1.0 / time2 + 1.0 / time3))); // 병렬 작업 시간
-
-                        // parallelTime이 bestTime보다 작음
-                        if (parallelTime.compareTo(bestTime) < 0) {
-                            bestTime = parallelTime;
-                            bestCombination = Arrays.asList(teamMembers.get(i), teamMembers.get(j));
-                        }
-                    }
-                    else if(Double.isFinite(time1) && time1 > 0){
-                        BigDecimal parallelTime = new BigDecimal(1.0 / (1.0 / time1)); // 병렬 작업 시간
-
-                        // parallelTime이 bestTime보다 작음
-                        if (parallelTime.compareTo(bestTime) < 0) {
-                            bestTime = parallelTime;
+                        if (taskTime.compareTo(bestTime) < 0) {
+                            bestTime = taskTime;
                             bestCombination = Arrays.asList(teamMembers.get(i));
                         }
                     }
-
                 }
             }
         }
         return bestCombination;
     }
-
-    // 최적의 팀 조합을 찾아주는 함수
+    // 최적의 팀을 찾아 작업 시간을 출력하는 함수
     public static void findOptimalTeamCombination2(List<TeamMember> teamMembers, double[][] timeMatrix, List<String> tasks, int firstTaskIdx) {
-
+        // 첫 번째 작업에 대한 팀 구성 및 작업 시간 계산
         List<TeamMember> firstTaskTeam = findOptimalTeamForTask2(teamMembers, timeMatrix, firstTaskIdx);
         BigDecimal firstTaskTime = calculateTaskTime2(teamMembers, firstTaskTeam, timeMatrix, firstTaskIdx);
         List<TeamMember> remainingMembers = excludeTeamMembers2(teamMembers, firstTaskTeam);
@@ -178,7 +147,6 @@ public class Main {
     }
 
 
-    // 각 작업에 대해 팀 멤버 3명을 선택하여 최단 기간을 계산하는 함수
     public static List<String> findOptimalTeamForTask(String[] teamMembers, double[][] timeMatrix, int taskIdx) {
         double bestTime = Double.POSITIVE_INFINITY;
         List<String> bestCombination = new ArrayList<>();
@@ -191,20 +159,20 @@ public class Main {
                     double time2 = timeMatrix[j][taskIdx];
                     double time3 = timeMatrix[k][taskIdx];
 
+                    double parallelTime = 0.0;
 
-                    double parallelTime=0.0;
                     // 유효한 작업 시간에 대해서만 계산
                     if (Double.isFinite(time1) && Double.isFinite(time2) && Double.isFinite(time3)) {
-                        // 병렬 작업 시간이 줄어드는 연산 방식 적용
-                        parallelTime = 3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3); // 병렬 작업 시간
+                        // 3명이 모두 작업 가능할 때 병렬 작업 시간 계산
+                        parallelTime = 3.0 / (1.0 / time1 + 1.0 / time2 + 1.0 / time3);
 
                         if (parallelTime < bestTime) {
                             bestTime = parallelTime;
                             bestCombination = Arrays.asList(teamMembers[i], teamMembers[j], teamMembers[k]);
                         }
                     }
+                    // 2명만 작업 가능할 때 병렬 작업 시간 계산
                     else if (Double.isFinite(time1) && Double.isFinite(time2)) {
-                        // 2명만 있을 때 병렬 작업 시간 계산
                         parallelTime = 2.0 / (1.0 / time1 + 1.0 / time2);
 
                         if (parallelTime < bestTime) {
@@ -212,8 +180,8 @@ public class Main {
                             bestCombination = Arrays.asList(teamMembers[i], teamMembers[j]);
                         }
                     }
+                    // 1명만 작업 가능할 때 작업 시간 그대로 사용
                     else if (Double.isFinite(time1)) {
-                        // 1명만 있을 때 작업 시간 계산 (병렬 작업이 아니므로 그대로 사용)
                         parallelTime = time1;
 
                         if (parallelTime < bestTime) {
@@ -221,13 +189,11 @@ public class Main {
                             bestCombination = Arrays.asList(teamMembers[i]);
                         }
                     }
-
                 }
             }
         }
         return bestCombination;
     }
-
     // 작업 시간을 계산하는 함수 (선택된 팀 멤버의 병렬 작업 시간)
     public static BigDecimal calculateTaskTime(String[] teamMembers, List<String> selectedMembers, double[][] timeMatrix, int taskIdx) {
         List<Double> times = new ArrayList<>();
@@ -667,7 +633,7 @@ public class Main {
 
         for (int i = 0; i< selectedTasks.size(); i++){
             System.out.println("\nCase " + (i+1) + ": "+ selectedTasks.get(i).getName() + " - 작업 최적화 먼저");
-            findOptimalTeamCombination2(selectedMembers, timeMatrixx, selectedTaskNames, 0);
+            findOptimalTeamCombination2(selectedMembers, timeMatrixx, selectedTaskNames, i);
         }
 
 
